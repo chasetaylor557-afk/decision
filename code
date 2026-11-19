@@ -1,0 +1,250 @@
+import React, { useState, useEffect } from 'react';
+
+const INITIAL_OPTIONS = [
+  { id: 1, name: "Home-cooked Pasta", category: "Food", cost: 10, time: 20 },
+  { id: 2, name: "Local Sushi Spot", category: "Food", cost: 30, time: 45 },
+  { id: 3, name: "Quick Tacos", category: "Food", cost: 12, time: 15 },
+  { id: 4, name: "30-Minute Sci-Fi Movie", category: "Entertainment", cost: 0, time: 30 },
+  { id: 5, name: "Go for a Jog & Podcast", category: "Fitness", cost: 0, time: 30 },
+  { id: 6, name: "Board Game Night", category: "Entertainment", cost: 0, time: 60 }
+];
+
+export default function App() {
+  const [options, setOptions] = useState(() => {
+    const saved = localStorage.getItem("decision_roulette_options");
+    return saved ? JSON.parse(saved) : INITIAL_OPTIONS;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("decision_roulette_options", JSON.stringify(options));
+  }, [options]);
+
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [maxBudget, setMaxBudget] = useState(50);
+  const [maxTime, setMaxTime] = useState(120);
+
+  const [result, setResult] = useState(null);
+  const [isSpinning, setIsSpinning] = useState(false);
+
+  const [newName, setNewName] = useState("");
+  const [newCategory, setNewCategory] = useState("Food");
+  const [newCost, setNewCost] = useState(10);
+  const [newTime, setNewTime] = useState(30);
+
+  const handleAddOption = (e) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+
+    const newItem = {
+      id: Date.now(),
+      name: newName.trim(),
+      category: newCategory,
+      cost: Number(newCost),
+      time: Number(newTime)
+    };
+
+    setOptions([newItem, ...options]);
+    setNewName("");
+  };
+
+  const handleDeleteOption = (id) => {
+    setOptions(options.filter(item => item.id !== id));
+    if (result && result.id === id) {
+      setResult(null);
+    }
+  };
+
+  const handleResetDefaults = () => {
+    if (window.confirm("Are you sure you want to reset to default options?")) {
+      setOptions(INITIAL_OPTIONS);
+      setResult(null);
+      localStorage.removeItem("decision_roulette_options");
+    }
+  };
+
+  const handleSpin = () => {
+    const filtered = options.filter(item => {
+      const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
+      const matchesCost = item.cost <= maxBudget;
+      const matchesTime = item.time <= maxTime;
+      return matchesCategory && matchesCost && matchesTime;
+    });
+
+    if (filtered.length === 0) {
+      alert("No options match your filters! Try loosening your budget or time limits.");
+      setResult(null);
+      return;
+    }
+
+    setIsSpinning(true);
+    setResult(null);
+
+    // Simulated wheel spin duration (1 second of suspense)
+    setTimeout(() => {
+      const randomIndex = Math.floor(Math.random() * filtered.length);
+      setResult(filtered[randomIndex]);
+      setIsSpinning(false);
+    }, 1000);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
+      <div className="max-w-md w-full bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-700">
+        
+        <div className="flex justify-between items-center mb-2">
+          <h1 className="text-2xl font-bold text-indigo-400">Decision Roulette</h1>
+          <button 
+            onClick={handleResetDefaults}
+            title="Reset to Defaults"
+            className="text-xs bg-slate-700 hover:bg-red-600/80 transition px-2.5 py-1 rounded-lg text-slate-300 hover:text-white"
+          >
+            Reset
+          </button>
+        </div>
+        <p className="text-slate-400 text-sm mb-6">Stop overthinking. Add your choices and spin the wheel!</p>
+
+        {/* Visual Wheel Graphic */}
+        <div className="flex justify-center mb-6">
+          <div className={`w-24 h-24 rounded-full border-4 border-indigo-500/30 border-t-indigo-500 flex items-center justify-center bg-slate-900/50 ${isSpinning ? 'animate-spin' : ''}`}>
+            <span className="text-3xl">🎯</span>
+          </div>
+        </div>
+
+        {/* Add Custom Option Form */}
+        <form onSubmit={handleAddOption} className="mb-6 p-4 bg-slate-900/50 border border-slate-700/60 rounded-xl space-y-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-indigo-400">Add Custom Option</h2>
+          
+          <input 
+            type="text" 
+            placeholder="e.g., Watch a documentary" 
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+          />
+
+          <div className="grid grid-cols-3 gap-2">
+            <select 
+              value={newCategory} 
+              onChange={(e) => setNewCategory(e.target.value)}
+              className="bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+            >
+              <option value="Food">Food</option>
+              <option value="Entertainment">Entertainment</option>
+              <option value="Fitness">Fitness</option>
+            </select>
+
+            <input 
+              type="number" 
+              placeholder="Cost ($)" 
+              value={newCost}
+              onChange={(e) => setNewCost(e.target.value)}
+              className="bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+            />
+
+            <input 
+              type="number" 
+              placeholder="Time (m)" 
+              value={newTime}
+              onChange={(e) => setNewTime(e.target.value)}
+              className="bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+
+          <button 
+            type="submit"
+            className="w-full bg-slate-700 hover:bg-slate-600 transition text-xs font-semibold py-2 rounded-lg"
+          >
+            + Add to List
+          </button>
+        </form>
+
+        {/* Options Management List */}
+        <div className="mb-6">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+            Current Options ({options.length})
+          </label>
+          <div className="max-h-32 overflow-y-auto space-y-1.5 pr-1 bg-slate-900/40 p-2 rounded-xl border border-slate-700/50">
+            {options.map((item) => (
+              <div key={item.id} className="flex justify-between items-center bg-slate-900 px-3 py-1.5 rounded-lg text-xs border border-slate-800">
+                <span className="truncate mr-2 text-slate-200">
+                  {item.name} <span className="text-slate-500">(${item.cost}, {item.time}m)</span>
+                </span>
+                <button 
+                  onClick={() => handleDeleteOption(item.id)}
+                  className="text-slate-500 hover:text-red-400 transition font-bold px-1"
+                  title="Delete option"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Filter Controls */}
+        <div className="space-y-4 mb-6">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Category Filter</label>
+            <select 
+              value={selectedCategory} 
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+            >
+              <option value="All">All Categories</option>
+              <option value="Food">Food</option>
+              <option value="Entertainment">Entertainment</option>
+              <option value="Fitness">Fitness</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+              Max Budget: ${maxBudget}
+            </label>
+            <input 
+              type="range" min="0" max="100" step="5"
+              value={maxBudget} 
+              onChange={(e) => setMaxBudget(Number(e.target.value))}
+              className="w-full accent-indigo-500 cursor-pointer"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+              Max Time: {maxTime} mins
+            </label>
+            <input 
+              type="range" min="10" max="180" step="10"
+              value={maxTime} 
+              onChange={(e) => setMaxTime(Number(e.target.value))}
+              className="w-full accent-indigo-500 cursor-pointer"
+            />
+          </div>
+        </div>
+
+        {/* Spin Button */}
+        <button 
+          onClick={handleSpin}
+          disabled={isSpinning}
+          className="w-full bg-indigo-600 hover:bg-indigo-500 active:scale-95 transition font-semibold py-3 rounded-xl shadow-lg disabled:opacity-50"
+        >
+          {isSpinning ? "Spinning..." : "Spin the Wheel!"}
+        </button>
+
+        {/* Result Display */}
+        {result && (
+          <div className="mt-6 p-4 bg-slate-900 border border-indigo-500/50 rounded-xl text-center animate-bounce">
+            <span className="text-xs uppercase tracking-widest text-indigo-400 font-bold">Winning Choice</span>
+            <h2 className="text-xl font-bold mt-1 text-white">{result.name}</h2>
+            <div className="flex justify-center gap-4 text-xs text-slate-400 mt-2">
+              <span>🏷️ {result.category}</span>
+              <span>💰 ${result.cost}</span>
+              <span>⏱️ {result.time}m</span>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
